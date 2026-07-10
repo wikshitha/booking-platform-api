@@ -1,0 +1,67 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  title       String    @db.VarChar(150)
+  description String
+  duration    Int
+  price       Decimal   @db.Decimal(10, 2)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+
+  @@index([isActive])
+  @@index([title])
+  @@map("services")
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  customerName  String        @db.VarChar(100)
+  customerEmail String        @db.VarChar(255)
+  customerPhone String        @db.VarChar(30)
+  serviceId     String
+  bookingDate   DateTime      @db.Date
+  bookingTime   DateTime      @db.Time(0)
+  status        BookingStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([serviceId, bookingDate, bookingTime], name: "unique_service_booking_slot")
+  @@index([status])
+  @@index([bookingDate])
+  @@index([customerEmail])
+  @@index([serviceId])
+  @@index([bookingDate, status])
+  @@map("bookings")
+}
