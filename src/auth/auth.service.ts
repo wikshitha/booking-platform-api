@@ -18,7 +18,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const normalizedEmail = registerDto.email.trim().toLowerCase();
@@ -44,13 +44,15 @@ export class AuthService {
 
     return {
       message: 'User registered successfully',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt,
+        },
+        accessToken,
       },
-      accessToken,
     };
   }
 
@@ -76,12 +78,14 @@ export class AuthService {
 
     return {
       message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+        accessToken,
       },
-      accessToken,
     };
   }
 
