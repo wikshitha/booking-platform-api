@@ -4,48 +4,48 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { Observable, map } from 'rxjs';
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  timestamp: string;
-  path: string;
-}
+import { ApiSuccessResponse } from '../interfaces/api-response.interface';
+
+type ServiceResponse<T> = {
+  message?: string;
+  data?: T;
+};
 
 @Injectable()
 export class ResponseInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>>
+  implements NestInterceptor<T | ServiceResponse<T>, ApiSuccessResponse<T>>
 {
   intercept(
     context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<ApiResponse<T>> {
+    next: CallHandler<T | ServiceResponse<T>>,
+  ): Observable<ApiSuccessResponse<T>> {
     const request = context.switchToHttp().getRequest<Request>();
 
     return next.handle().pipe(
       map((response) => {
-        const message =
-          response &&
+        const isStructuredResponse =
+          response !== null &&
           typeof response === 'object' &&
-          'message' in response
-            ? String(response.message)
-            : 'Request completed successfully';
+          ('message' in response || 'data' in response);
 
-        const data =
-          response &&
-          typeof response === 'object' &&
-          'data' in response
-            ? response.data
-            : response;
+        const structuredResponse = isStructuredResponse
+          ? (response as ServiceResponse<T>)
+          : undefined;
 
         return {
           success: true,
-          message,
-          data,
+          message:
+            structuredResponse?.message ??
+            'Request completed successfully',
+          data:
+            structuredResponse && 'data' in structuredResponse
+              ? (structuredResponse.data as T)
+              : (response as T),
           timestamp: new Date().toISOString(),
-          path: request.url,
+          path: request.originalUrl ?? request.url,
         };
       }),
     );

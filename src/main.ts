@@ -1,10 +1,12 @@
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ValidationError } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { ValidationException } from './common/exceptions/validation.exception';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,16 +22,37 @@ async function bootstrap() {
   });
 
   app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
+    exceptionFactory: (validationErrors: ValidationError[]) => {
+      const errors = validationErrors.flatMap((error) => {
+        if (!error.constraints) {
+          return [
+            {
+              field: error.property,
+              message: `${error.property} is invalid`,
+            },
+          ];
+        }
 
+        return Object.values(error.constraints).map((message) => ({
+          field: error.property,
+          message,
+        }));
+      });
+
+      return new ValidationException(errors);
+    },
+  }),
+);
+
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
   const swaggerConfig = new DocumentBuilder()
