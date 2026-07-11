@@ -433,7 +433,6 @@ Examples include:
 
 **Wikshitha Umindu**
 
-Software Engineer Intern Candidate
 
 Built using:
 
